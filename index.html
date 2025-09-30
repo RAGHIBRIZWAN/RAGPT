@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAGPT | Recipe Generator</title>
+    
+    <!-- Google Fonts: Manrope -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Fix sidebar toggle button color */
+        #toggle-history {
+            background: linear-gradient(135deg, #22c55e 60%, #16a34a 100%) !important;
+            color: #101418 !important;
+            box-shadow: 0 2px 12px #22c55e22 !important;
+        }
+        #toggle-history:hover {
+            background: linear-gradient(135deg, #16a34a 60%, #22c55e 100%) !important;
+            color: #e5e7eb !important;
+        }
+        /* Fix textarea color */
+        textarea {
+            background-color: #101418 !important;
+            color: #a7f3d0 !important;
+        }
+        textarea::placeholder {
+            color: #4ade80 !important;
+            opacity: 1;
+        }
+        /* Loader icon green */
+        .chef-loader path {
+            fill: #22c55e !important;
+        }
+        :root {
+            --bg-color: #101418;
+            --card-bg-color: rgba(24, 32, 28, 0.92);
+            --border-color: #1a2e1a;
+            --primary-color: #22c55e; /* Green */
+            --primary-hover-color: #16a34a;
+            --text-color-dark: #e5e7eb;
+            --text-color-light: #a7f3d0;
+            --shadow-color: rgba(34, 197, 94, 0.08);
+            --backdrop-blur: 0px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            background-image: radial-gradient(circle at 20% 10%, #22c55e22 0%, transparent 70%), radial-gradient(circle at 80% 90%, #22c55e18 0%, transparent 70%);
+        }
+        body::before, body::after { display: none; }
+        .container { width: 100%; max-width: 800px; padding: 2rem 1.5rem; }
+        .header { text-align: center; margin-bottom: 3rem; animation: fadeInDown 0.8s ease-out; }
+        .header h1 {
+            font-size: 2.75rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            color: var(--primary-color);
+            text-shadow: 0 2px 16px #22c55e22;
+        }
+        .header p { font-size: 1.125rem; color: var(--text-color-light); margin-top: 0.5rem; }
+        .card {
+            background: var(--card-bg-color);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            border: 1.5px solid var(--border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease-out;
+            animation-fill-mode: both;
+        }
+        .input-card { animation-delay: 0.2s; }
+        #recipe-output { animation-delay: 0.2s; }
+        .form-group label { display: block; font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; }
+        textarea {
+            width: 100%; padding: 1rem; border-radius: 0.75rem;
+            border: 1.5px solid var(--primary-color);
+            background-color: #181c1b; color: #a7f3d0;
+            font-family: 'Manrope', sans-serif; font-size: 1rem;
+            resize: vertical; min-height: 120px; transition: all 0.3s ease;
+        }
+        textarea:focus {
+            outline: none; border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px #22c55e33; background: #101418; color: #bbf7d0;
+        }
+        .generate-btn {
+            width: 100%; padding: 1rem; font-size: 1.125rem; font-weight: 700;
+            color: #101418;
+            background: linear-gradient(90deg, #22c55e 60%, #16a34a 100%);
+            border: none; border-radius: 0.75rem; cursor: pointer; margin-top: 1.5rem;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px #22c55e22;
+        }
+        .generate-btn:hover {
+            background: linear-gradient(90deg, #16a34a 60%, #22c55e 100%);
+            color: #e5e7eb; transform: translateY(-3px); box-shadow: 0 6px 20px #22c55e33;
+        }
+        #history-sidebar {
+            background: linear-gradient(135deg, #101418 60%, #1a2e1a 100%);
+            border-right: 1.5px solid #1a2e1a;
+            box-shadow: 4px 0 24px 0 #22c55e11;
+        }
+        #history-sidebar h2 { color: #22c55e; }
+        .history-item { background: #181c1b; border: 1.5px solid #1a2e1a; color: #a7f3d0; }
+        .history-item:hover { background: #101418; border: 1.5px solid #22c55e; box-shadow: 0 4px 16px #22c55e22; }
+        .history-item-title { color: #22c55e; }
+        .history-item-desc { color: #a7f3d0; }
+        #toggle-history {
+            background: linear-gradient(135deg, #22c55e 60%, #16a34a 100%);
+            color: #101418;
+            box-shadow: 0 2px 12px #22c55e22;
+        }
+        #toggle-history:hover {
+            background: linear-gradient(135deg, #16a34a 60%, #22c55e 100%);
+            color: #e5e7eb;
+        }
+        #clear-history-btn {
+            background: #16a34a !important;
+            color: #e5e7eb !important;
+        }
+        #clear-history-btn:hover {
+            background: #22c55e !important;
+            color: #101418 !important;
+        }
+        .delete-history-btn {
+            background: #101418 !important;
+            color: #22c55e !important;
+            border: 1.5px solid #22c55e !important;
+        }
+        .delete-history-btn:hover {
+            background: #22c55e !important;
+            color: #101418 !important;
+        }
+        #recipe-output h2 { font-size: 2.25rem; font-weight: 800; margin-bottom: 0.75rem; color: #22c55e; }
+        #recipe-output #recipe-description {
+            font-size: 1.1rem; color: var(--text-color-light); margin-bottom: 2rem;
+            border-left: 3px solid var(--primary-color); padding-left: 1.5rem;
+        }
+        #recipe-output h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1a2e1a; color: #22c55e; }
+        #recipe-output ul, #recipe-output ol { padding-left: 1.5rem; margin-bottom: 2rem; }
+        #recipe-output li { margin-bottom: 0.75rem; line-height: 1.7; color: #a7f3d0; }
+        .error-message {
+            display: none; background-color: #1a2e1a; color: #22c55e;
+            border: 1.5px solid #22c55e; border-left-width: 5px; border-left-color: #22c55e;
+            padding: 1.5rem; border-radius: 0.75rem; font-weight: 500;
+        }
+        .loader-container { display: none; justify-content: center; align-items: center; flex-direction: column; gap: 1rem; text-align: center; padding: 3rem; }
+        .chef-loader { width: 60px; height: 60px; animation: spin 1.2s cubic-bezier(0.6, 0, 0.4, 1) infinite; }
+        .loader-container p { font-weight: 600; font-size: 1.1rem; color: var(--text-color-light); }
+        @media (max-width: 900px) {
+            #history-sidebar { width: 100vw !important; max-width: 100vw; position: fixed; left: 0; top: 0; z-index: 100; }
+            #main-content { margin-left: 0 !important; }
+        }
+        @media (max-width: 640px) {
+            .header h1 { font-size: 2.25rem; }
+            .header p { font-size: 1rem; }
+            .card { padding: 1.5rem; }
+        }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        
+        /* --- Background Decoration --- */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -10%;
+            left: -10%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.1), transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+            filter: blur(50px);
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -15%;
+            right: -10%;
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.15), transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+            filter: blur(60px);
+        }
+
+        /* --- Main Container --- */
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem 1.5rem;
+        }
+
+        /* --- Header --- */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .header h1 {
+            font-size: 2.75rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .header p {
+            font-size: 1.125rem;
+            color: var(--text-color-light);
+            margin-top: 0.5rem;
+        }
+
+        /* --- Glassmorphism Card Style --- */
+        .card {
+            background: var(--card-bg-color);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .input-card { animation-delay: 0.2s; }
+        #recipe-output { animation-delay: 0.2s; }
+
+        /* --- Form Elements --- */
+        .form-group label {
+            display: block;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            background-color: rgba(255, 255, 255, 0.5);
+            font-family: 'Manrope', sans-serif;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #fff;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+        }
+
+        .generate-btn:hover {
+            background-color: var(--primary-hover-color);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+        }
+
+        /* --- Loader Section --- */
+        .loader-container {
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .chef-loader {
+            width: 60px;
+            height: 60px;
+            animation: spin 1.2s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+        }
+        
+        .loader-container p {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-color-light);
+        }
+
+        /* --- Recipe Output --- */
+        #recipe-output {
+            display: none; /* Hidden by default */
+        }
+        
+        #recipe-output h2 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+        }
+        
+        #recipe-output #recipe-description {
+            font-size: 1.1rem;
+            color: var(--text-color-light);
+            margin-bottom: 2rem;
+            border-left: 3px solid var(--primary-color);
+            padding-left: 1.5rem;
+        }
+        
+        #recipe-output h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        #recipe-output ul, #recipe-output ol {
+            padding-left: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        #recipe-output li {
+            margin-bottom: 0.75rem;
+            line-height: 1.7;
+        }
+        
+        /* --- Error Message --- */
+        .error-message {
+            display: none; /* Hidden by default */
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            border-left-width: 5px;
+            border-left-color: #ef4444;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 640px) {
+            .header h1 { font-size: 2.25rem; }
+            .header p { font-size: 1rem; }
+            .card { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- SIDEBAR FOR HISTORY -->
+    <aside id="history-sidebar" style="position:fixed;left:0;top:0;height:100vh;width:270px;background:linear-gradient(135deg,#101418 60%,#1a2e1a 100%);border-right:1.5px solid #1a2e1a;box-shadow:4px 0 24px 0 #22c55e11;padding:2rem 1rem 1rem 1rem;z-index:10;overflow-y:auto;display:none;flex-direction:column;gap:1.5rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;gap:0.5rem;">
+            <h2 style="font-size:1.3rem;font-weight:800;color:#22c55e;margin:0;">Recipe History</h2>
+            <button id="clear-history-btn" title="Clear all history" style="background:#16a34a;color:#e5e7eb;border:none;border-radius:0.5em;padding:0.4em 0.9em;font-weight:700;font-size:0.98em;cursor:pointer;box-shadow:0 1px 4px #22c55e33;transition:background 0.18s;">Clear</button>
+        </div>
+    <ul id="history-list" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.7rem;"></ul>
+    </aside>
+
+    <button id="toggle-history" style="position:fixed;left:10px;top:10px;z-index:20;background:#4f46e5;color:#fff;border:none;border-radius:50%;width:44px;height:44px;box-shadow:0 2px 8px rgba(79,70,229,0.13);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.2s;">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 15h6"/></svg>
+    </button>
+
+    <main class="container" style="margin-left:0;transition:margin-left 0.3s;" id="main-content">
+        <!-- HEADER -->
+        <header class="header">
+            <h1>
+                <!-- Chef Hat Icon -->
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: var(--primary-color);">
+                    <path d="M12 2C9.24 2 7 4.24 7 7V11.55C5.81 12.23 5 13.51 5 15C5 16.66 6.34 18 8 18H16C17.66 18 19 16.66 19 15C19 13.51 18.19 12.23 17 11.55V7C17 4.24 14.76 2 12 2ZM9 7C9 5.34 10.34 4 12 4C13.66 4 15 5.34 15 7V11H9V7ZM16 20H8V22H16V20Z" fill="currentColor"/>
+                </svg>
+                RAGPT
+            </h1>
+            <p>Turn ingredients into delicious dinner.</p>
+        </header>
+
+        <!-- INPUT CARD -->
+        <section class="card input-card">
+            <div class="form-group">
+                <label for="ingredients-input">What's in your kitchen?</label>
+                <textarea id="ingredients-input" placeholder="e.g., chicken breast, broccoli, garlic, olive oil, lemon" required></textarea>
+            </div>
+            <button class="generate-btn" id="generate-btn">
+                <!-- Sparkle Icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3L9.5 8.5L4 11L9.5 13.5L12 19L14.5 13.5L20 11L14.5 8.5L12 3z" />
+                    <path d="M5 21L7 17L9 21" />
+                    <path d="M15 21L17 17L19 21" />
+                </svg>
+                Create Recipe
+            </button>
+        </section>
+
+        <!-- LOADER -->
+        <section class="loader-container" id="loader">
+             <!-- Custom Loader SVG (Chef Hat) -->
+            <svg class="chef-loader" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C9.24 2 7 4.24 7 7V11.55C5.81 12.23 5 13.51 5 15C5 16.66 6.34 18 8 18H16C17.66 18 19 16.66 19 15C19 13.51 18.19 12.23 17 11.55V7C17 4.24 14.76 2 12 2ZM9 7C9 5.34 10.34 4 12 4C13.66 4 15 5.34 15 7V11H9V7ZM16 20H8V22H16V20Z" fill="#4f46e5"/>
+            </svg>
+            <p>Your personal chef is thinking...</p>
+        </section>
+        
+        <!-- ERROR MESSAGE -->
+        <div class="error-message" id="error-message">
+            <strong>Oops! Something went wrong.</strong>
+            <p>Could not generate a recipe. Please try again later or check your ingredients.</p>
+        </div>
+
+        <!-- RECIPE OUTPUT CARD -->
+        <section class="card" id="recipe-output">
+            <!-- Content will be dynamically inserted here by JavaScript -->
+            <h2 id="recipe-name"></h2>
+            <p id="recipe-description"></p>
+            <div id="recipe-content">
+                <h3>Ingredients</h3>
+                <ul id="ingredients-list"></ul>
+                <h3>Instructions</h3>
+                <ol id="instructions-list"></ol>
+            </div>
+        </section>
+
+    </main>
+    
+    <!-- This line connects your JavaScript file to your HTML -->
+    <script src="script.js"></script>
+
+</body>
+</html>
